@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>わくわく！マネータイプ診断！</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <style>
+        /* デザイン設定: 緑、ゴールド、濃い青（マネー・信頼テーマ） */
+        body {
+            font-family: "Hiragino Kaku Gothic ProN", "メイリオ", sans-serif;
+            background-color: #FFF8E1; 
+            color: #333;
+            text-align: center;
+            padding: 20px;
+            margin: 0;
+            user-select: none;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            border: 4px solid #004D40; 
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            transition: height 0.3s;
+        }
+        h1 {
+            color: #004D40; 
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        /* 表紙画面のデザイン */
+        #start-screen { display: block; }
+        .start-lead {
+            font-size: 18px;
+            font-weight: bold;
+            color: #FFC107;
+            margin-bottom: 30px;
+        }
+        .start-desc {
+            font-size: 15px;
+            color: #555;
+            margin-bottom: 40px;
+            line-height: 1.6;
+        }
+        .start-btn-large {
+            background-color: #FFC107; 
+            color: #004D40; 
+            border: none;
+            border-radius: 50px;
+            padding: 20px 40px;
+            font-size: 22px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s;
+            box-shadow: 0 6px #FF8F00; 
+            width: 80%;
+            margin: 0 auto;
+            display: block;
+            animation: pulse 2s infinite;
+        }
+        .start-btn-large:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px #FF8F00;
+        }
+
+        /* 質問画面・結果画面 */
+        #quiz-area, #result-area { display: none; }
+
+        .privacy-note {
+            font-size: 13px;
+            color: #1A795A;
+            background-color: #E8F5E9;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-weight: bold;
+            line-height: 1.5;
+            text-align: left;
+        }
+        
+        .progress-bar-container {
+            width: 100%;
+            background-color: #e0e0e0;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            height: 10px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%;
+            background-color: #FFC107;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .question-box {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 25px;
+            min-height: 60px;
+            padding: 10px;
+            background-color: #E8F5E9; 
+            border-radius: 10px;
+        }
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        button.option-btn {
+            background-color: #FFC107; 
+            color: #333; 
+            border: none;
+            border-radius: 50px;
+            padding: 15px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.1s;
+            box-shadow: 0 4px #FF8F00; 
+            text-align: left;
+            padding-left: 25px;
+            font-weight: bold;
+        }
+        button.option-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 #FF8F00;
+        }
+        button.option-btn:hover {
+            background-color: #FFB300;
+        }
+        button.neutral-btn {
+            background-color: #bdbdbd;
+            box-shadow: 0 4px #757575;
+            color: white; 
+        }
+        button.neutral-btn:hover {
+            background-color: #a0a0a0;
+        }
+        
+        /* 結果画面のデザイン */
+        .animal-icon {
+            font-size: 100px;
+            display: block;
+            margin: 10px 0;
+            animation: pop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .type-title {
+            font-size: 28px;
+            color: #004D40; 
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .catchphrase {
+            font-weight: bold;
+            color: #FFC107; 
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+        .chart-container {
+            position: relative;
+            margin: 20px auto;
+            height: 300px;
+            width: 100%;
+        }
+        .desc {
+            text-align: left;
+            background: #FFFDE7; 
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 20px;
+            line-height: 1.8;
+            border: 2px dashed #FFC107; 
+        }
+        
+        /* SNSシェアボタン */
+        .share-area {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+        /* ダウンロードボタンのスタイル */
+        .download-btn {
+            background-color: #004D40; /* メインカラー（濃い緑） */
+            color: white;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 4px #00332B;
+            width: 80%;
+            margin: 15px auto 0;
+            display: block;
+            transition: transform 0.1s;
+        }
+        .download-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 #00332B;
+        }
+
+        .share-btn {
+            padding: 10px 20px;
+            border-radius: 5px;
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 14px;
+            display: inline-block;
+            text-align: center;
+        }
+        .share-twitter { background-color: #1DA1F2; }
+        .share-line { background-color: #06C755; }
+
+        .restart-btn {
+            background-color: #1976D2; 
+            box-shadow: 0 4px #0D47A1;
+            margin-top: 30px;
+            text-align: center;
+            border-radius: 10px;
+            color: white;
+            width: 100%;
+            padding: 15px 0;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+        }
+
+        @keyframes pop {
+            0% {transform: scale(0);}
+            100% {transform: scale(1);}
+        }
+        @keyframes pulse {
+            0% {transform: scale(1);}
+            50% {transform: scale(1.05);}
+            100% {transform: scale(1);}
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="start-screen">
+        <h1>💎 わくわく！マネータイプ診断！ 💎</h1>
+        <p class="start-lead">キミのお金の使い方、どの動物タイプ？</p>
+        <div class="start-desc">
+            <p>お金の使い方には、その人の個性が隠れています。<br>
+            たった16問の質問に答えるだけで、あなたの「マネータイプ」と、お金の「バランス」が分かります。</p>
+            <p>※回答は誰にも見られません。直感で答えてね！</p>
+        </div>
+        <button class="start-btn-large" onclick="startGame()">診断をスタート！</button>
+    </div>
+
+    <div id="quiz-area">
+        <p class="privacy-note">
+            ※回答は本人以外知ることができない仕組みです。本音で回答してね。
+        </p>
+        <p>しつもん <span id="q-number">1</span> / 16</p>
+        <div class="progress-bar-container">
+            <div id="progress-bar" class="progress-bar"></div>
+        </div>
+        <div id="quiz-content" class="fade-in">
+            <div class="question-box" id="question-text">ここに質問が出ます</div>
+            <div class="options" id="options-container"></div>
+        </div>
+    </div>
+
+    <div id="result-area" class="result-area">
+        <div id="result-content-container">
+            <h1>診断結果！</h1>
+            <div id="result-content"></div>
+            
+            <div class="chart-container">
+                <canvas id="radarChart"></canvas>
+            </div>
+
+            <div id="result-desc"></div>
+        </div>
+        <button onclick="downloadResultImage()" class="download-btn">結果画像をダウンロード 📸</button>
+
+        <div class="share-area">
+            <a href="#" id="share-twitter" class="share-btn share-twitter" target="_blank">Xでシェア</a>
+            <a href="#" id="share-line" class="share-btn share-line" target="_blank">LINEでシェア</a>
+        </div>
+
+        <button class="restart-btn" onclick="location.reload()">もう一回やる！</button>
+    </div>
+</div>
+
+<script>
+    // --- 音声生成システム (Web Audio API) ---
+    let audioCtx;
+
+    function initAudio() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+    }
+
+    function playTone(freq, type, duration, delay = 0) {
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delay);
+        
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime + delay);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + delay + duration);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(audioCtx.currentTime + delay);
+        osc.stop(audioCtx.currentTime + delay + duration);
+    }
+
+    function playCoinSound() {
+        initAudio();
+        playTone(987, 'sine', 0.1);
+        playTone(1318, 'sine', 0.4, 0.05);
+    }
+
+    function playClickSound() {
+        initAudio();
+        playTone(800, 'triangle', 0.1); 
+    }
+
+    function playFanfare() {
+        initAudio();
+        playTone(523.25, 'triangle', 0.3, 0);    
+        playTone(659.25, 'triangle', 0.3, 0.15); 
+        playTone(783.99, 'triangle', 0.3, 0.30); 
+        playTone(1046.50, 'triangle', 0.8, 0.45);
+    }
+
+    // --- 画像ダウンロード機能 ---
+    function downloadResultImage() {
+        const target = document.getElementById('result-content-container');
+        
+        // チャートの表示を確実にするため、少し待つ
+        setTimeout(() => {
+            html2canvas(target, {
+                // スクロールせず、指定された要素のサイズでキャプチャ
+                windowWidth: target.scrollWidth,
+                windowHeight: target.scrollHeight,
+                useCORS: true,
+                scale: 2 // 高解像度でキャプチャ
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'マネー診断結果.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        }, 500); // 0.5秒待機
+    }
+
+
+    // --- 診断ロジック (変更なし) ---
+    const questions = [
+        { text: "Q1. お年玉（まとまったお金）をもらった！まずどうする？", options: [{ text: "すぐに貯金箱に入れる", type: "A" }, { text: "欲しかったものをすぐに買う！", type: "B" }, { text: "いくら使うか計画を立てる", type: "C" }, { text: "家族や友達にプレゼントを買う", type: "D" }, { text: "どうやって増やそうか考える", type: "E" }, { text: "どれもあまり当てはまらない", type: "N" }] },
+        { text: "Q2. 100円をなくした！どうしよう…？", options: [{ text: "ショックで立ち直れない…", type: "G" }, { text: "また稼げばいいから気にしない", type: "E" }, { text: "「次は気をつけよう」と反省する", type: "C" }, { text: "なくなっても後悔しないようにすぐ使うべきだった", type: "B" }, { text: "お金は使ってこそ意味がある", type: "H" }, { text: "どれもあまり当てはまらない", type: "N" }] },
+        { text: "Q3. 友達の誕生日プレゼント選び。どうする？", options: [{ text: "予算を決め、それに合わせて考える", type: "C" }, { text: "相手が本当に喜ぶものを値段気にせず選ぶ", type: "D" }, { text: "手作りにするか、お金をかけない方法を考える", type: "A" }, { text: "一緒に遊園地などに行き、思い出をプレゼント", type: "H" }, { text: "その時の気分でピンときたものを買う", type: "F" }, { text: "どれもあまり当てはまらない", type: "N" }] },
+        { text: "Q4. 欲しいものがあるけどお金が足りない…どうする？", options: [{ text: "すぐ親にお願いする、または借りる", type: "F" }, { text: "お手伝いを増やしたり、不用品を売って稼ぐ", type: "E" }, { text: "目標額を決め、計画的に貯める", type: "C" }, { text: "損をしたくないから、とりあえず我慢する", type: "G" }, { text: "友達と協力して手に入れる方法を考える", type: "D" }, { text: "どれもあまり当てはまらない", type: "N" }] },
+        { text: "Q5. 買い物に行った時、セール品を見つけたら？", options: [{ text: "得だから、とりあえず買っておく！", type: "B" }, { text: "計画にないから、触らないようにする", type: "A" }, { text: "「安いから」だけで買って失敗しないか不安", type: "G" }, { text: "本当に必要か、一旦家に帰って考える", type: "C" }, { text: "その時の気分で欲しいと思ったら買う", type: "F" }, { text: "どれもあまり当てはまらない", type: "N" }] },
+        { text: "Q6. お小遣い帳（記録）をつけるのは好き？", options: [{ text: "きっちり記録するのが楽しい", type: "C" }, { text: "面倒くさい、記録はしない", type: "F" }, { text: "お金が増減する記録を見るのは楽しい", type: "E" }, { text: "記録をしないと、不安で仕方ない", type: "G" }, { text: "誰と何に使ったか（思い出）を記録するのは好き", type: "D" }, { text: "どれもあまり当てはまらない", type: "N" }] },
+        { text: "Q7. お金を使って一番嬉しいのはどんな時？", options: [{ text: "自分の貯金が増えていくのを見た時", type: "A" }, { text: "欲しかったモノをゲットした瞬間", type: "B" }, { text: "新しいことを学んだり、面白い場所に行った時", type: "H" }, { text: "誰かに喜んでもらえた時", type: "D" }, { text: "自分が頑張った対価として稼げた時", type: "E" }, { text: "どれもあまり当てはまらない", type: "N" }] },
+        { text: "Q8. 1ヶ月間、お金を全然使わなかった！感想は？", options: [{ text: "目標達成！最高の気分だ", type: "A" }, { text: "使うのを忘れていた。特になんとも思わない", type: "F" }, { text: "もったいないことをした。もっと使えばよかった", type: "B" }, { text: "このままお金が減らないでほしいと強く思う", type: "G" }, { text: "誰かの役に立つことに使いたかった", type: "D" }, { text: "どれもあまり当てはまらない", type: "N" }] },
+        { text: "Q9. 貯金箱のお金が、友達のお菓子代に足りないと言われたら？", options: [{ text: "快く貸してあげる（またはプレゼントする）", type: "D" }, { text: "貸せない。貯金は崩したくない", type: "A" }, { text: "貸せるけど、いつ返してくれるか約束してもらう", type: "C" }, { text: "一緒に稼ぐ方法を提案する", type: "E" }, { text: "貸すのは嫌だけど、断りづらい…", type: "G" }, { text: "どれもあまり当てはまらない", type: "N" }] },
+        { text: "Q10. 好きなブランドやお店を見つけたら？", options: [{ text: "他の店と比較して本当に安いか確かめる", type: "C" }, { text: "他にはない、珍しい体験ができるならお金を出す", type: "H" }, { text: "お店の裏側（どうやって儲けているか）に興味を持つ", type: "E" }, { text: "気に入ったら、他のものは見ずにそこで買う", type: "B" }, { text: "気に入ったけど、ここで買ったら損するんじゃないか迷う", type: "G" }, { text: "どれもあまり当てはまらない", type: "N" }] },
+        { text: "Q11. お金を使うことで得られるのは何だと思う？", options: [{ text: "安全や安心", type: "A" }, { text: "喜びや楽しみ", type: "B" }, { text: "知識や経験", type: "H" }, { text: "信頼や感謝", type: "D" }, { text: "自由", type: "F" }, { text: "どれもあまり当てはまらない", type: "N" }] },
+        { text: "Q12. お財布が壊れてしまった！どうする？", options: [{ text: "新しいお財布をすぐに買いに行く", type: "B" }, { text: "修理代と新しいものを比べるなど、一番得する方法を考える", type: "C" }, { text: "また壊れるのが嫌だから、お財布は使わずジップロック", type: "G" }, { text: "お小遣いを貯めて、高品質で長持ちするものを買う", type: "A" }, { text: "デザインが気に入ったものを直感で選ぶ", type: "F" }, { text: "どれもあまり当てはまらない", type: "N" }] },
+        { text: "Q13. 【もし】100万円が当たったら、まずどうする？", options: [{ text: "半分以上は貯金する", type: "A" }, { text: "旅行や特別な体験など、一生の思い出に使う", type: "H" }, { text: "投資やビジネスのアイデアに使って増やす", type: "E" }, { text: "家族や親戚、困っている人に分ける", type: "D" }, { text: "全て銀行に預け、怖くて使えない", type: "G" }, { text: "どれもあまり当てはまらない", type: "N" }] },
+        { text: "Q14. お金が少し足りない時、借りることについてどう思う？", options: [{ text: "恥ずかしい。誰にも借りたくない", type: "G" }, { text: "借りる前に、どうやったら稼げるか考える", type: "E" }, { text: "返す計画をしっかり立てられるなら問題ない", type: "C" }, { text: "借りてでも今すぐ欲しいものがあるなら借りる", type: "B" }, { text: "友達が困っているなら、自分はすぐに貸してあげる", type: "D" }, { text: "どれもあまり当てはまらない", type: "N" }] },
+        { text: "Q15. 中古品（used）を買うのは好き？", options: [{ text: "新品でなければ嫌だ。安心感が大切", type: "G" }, { text: "中古でも、体験できる価値が変わらないなら買う", type: "H" }, { text: "新品より安いなら、得だから喜んで買う", type: "A" }, { text: "品質より、デザインやメーカーにこだわって買う", type: "B" }, { text: "中古を安く買って、きれいに直して売る方が楽しい", type: "E" }, { text: "どれもあまり当てはまらない", type: "N" }] },
+        { text: "Q16. 大切な情報の管理についてどう思う？", options: [{ text: "厳重に守る。誰にも見られないように隠す", type: "G" }, { text: "必要な時だけ使う。記録はノートにしっかりつけておく", type: "C" }, { text: "どうでもいい。失くしたらまた作ればいい", type: "F" }, { text: "良い情報はみんなで共有すべきだ", type: "D" }, { text: "他の人の情報も分析して、ビジネスに活かせないか考える", type: "E" }, { text: "どれもあまり当てはまらない", type: "N" }] }
+    ];
+
+    const results = {
+        "A": { animal: "🐿️", title: "コツコツ貯める「リスさん」", catch: "～目標達成型の堅実貯蓄家～", desc: "キミは将来の目標のために我慢できる、意志の強い堅実家！計画的で、貯金が増えるのを見るのが大好きです。<br><strong>💰アドバイス：</strong>貯めたお金は、計画的に使うことで、さらに大きな喜びにつながりますよ！" },
+        "B": { animal: "🐰", title: "パッと使う「ウサギさん」", catch: "～「欲しい」に一直線の衝動消費家～", desc: "キミは行動力バツグンの元気っ子！楽しいことや欲しいもののためにお金を使うのが得意です。<br><strong>💰アドバイス：</strong>大きな買い物をする前には「一晩考える」ルールを作ると、さらに満足度の高い使い方ができます！" },
+        "C": { animal: "🦉", title: "しっかり計画「フクロウ博士」", catch: "～冷静沈着な予算戦略家～", desc: "キミは頭を使って上手にお金と付き合える博士タイプ。予算管理や、損をしないための比較検討が得意です。<br><strong>💰アドバイス：</strong>完璧を目指して考えすぎちゃうことも。「これが好き！」という自分の直感も大切にしてみてね。" },
+        "D": { animal: "🧸", title: "みんなハッピー「クマさん」", catch: "～優しさあふれる利他的消費家～", desc: "キミは誰かのためにお金を使うことに一番幸せを感じる、優しい心の持ち主です。<br><strong>💰アドバイス：</strong>人助けは素晴らしいですが、先に自分自身の「将来の貯金」という名の安全基地をしっかり作ってあげましょう。" },
+        "E": { animal: "🦁", title: "稼ぐの大好き「ライオン社長」", catch: "～お金を増やす未来の起業家～", desc: "キミは「お金を使う」だけでなく、「稼ぐ」「増やす」という視点を持ったリーダータイプ！<br><strong>💰アドバイス：</strong>稼ぐことに夢中になりすぎず、「何のために稼ぐのか」という目的を明確にすると、人望も集まります。" },
+        "F": { animal: "🐱", title: "気ままな「ネコさん」", catch: "～気分で動く自由な直感派～", desc: "キミは周りに流されず、その時の気分や直感で動く自由人。ルールに縛られるのが嫌いで、自分の価値観が第一です。<br><strong>💰アドバイス：</strong>直感は大事ですが、お財布の中身が空っぽになる前に、スマホなどでざっくりと残高を確認する習慣をつけると安心です！" },
+        "G": { animal: "🦔", title: "超慎重な「ハリネズミ」", catch: "～お金の損失を極度に恐れる防衛派～", desc: "キミは損をすることや、お金が減ることを極度に恐れるタイプ。貯金を崩すのが嫌いで、常に備えています。<br><strong>💰アドバイス：</strong>お金は「安心」のために貯めるものです。時にはその安心を元に、新しい経験のために使ってみると世界が広がりますよ。" },
+        "H": { animal: "🐬", title: "体験投資家「イルカ」", catch: "～モノより学びと経験を求める探究者～", desc: "キミは洋服やおもちゃなどの「モノ」にはあまり興味がなく、「経験や知識」にお金を投資するのが好きです。<br><strong>💰アドバイス：：</strong>体験は素晴らしい財産ですが、緊急時のお金も大切です。経験のための予算と、貯金のための予算を分けて作りましょう。" },
+        "N": { animal: "🌈", title: "なんでもOK「にじいろ」タイプ", catch: "～可能性は無限大のマルチプレイヤー～", desc: "キミはどのタイプにも当てはまらない、自由でユニークな感性の持ち主です！その時の状況や気分で、どのタイプにもなれる、可能性が無限大なタイプだよ！<br><strong>💰アドバイス：</strong>キミは全てを使いこなせる天才かも！一つに絞らず、いろんなお金の使い方にチャレンジしてみてね。" }
+    };
+
+    let currentQuestionIndex = 0;
+    let scores = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0, G: 0, H: 0, N: 0 };
+    const totalQuestions = questions.length;
+
+    function showQuestion() {
+        playClickSound(); // クリック音
+        const quizContent = document.getElementById('quiz-content');
+        
+        // アニメーションのリセット
+        quizContent.classList.remove('fade-in');
+        void quizContent.offsetWidth; 
+        quizContent.classList.add('fade-in');
+
+        const q = questions[currentQuestionIndex];
+        document.getElementById('question-text').innerText = q.text;
+        document.getElementById('q-number').innerText = currentQuestionIndex + 1;
+        
+        // プログレスバー更新
+        const progress = ((currentQuestionIndex) / totalQuestions) * 100;
+        document.getElementById('progress-bar').style.width = progress + "%";
+
+        const optionsDiv = document.getElementById('options-container');
+        optionsDiv.innerHTML = "";
+
+        q.options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.innerText = opt.text;
+            btn.className = 'option-btn ' + (opt.type === "N" ? 'neutral-btn' : ''); 
+            btn.onclick = () => selectOption(opt.type);
+            optionsDiv.appendChild(btn);
+        });
+    }
+
+    function selectOption(type) {
+        playClickSound(); // クリック音
+
+        if (type !== "N") {
+            scores[type]++;
+        } else {
+            scores.N++;
+        }
+        
+        currentQuestionIndex++;
+
+        if (currentQuestionIndex < totalQuestions) {
+            showQuestion();
+        } else {
+            document.getElementById('progress-bar').style.width = "100%";
+            showResult();
+        }
+    }
+
+    function showResult() {
+        document.getElementById('quiz-area').style.display = 'none';
+        document.getElementById('result-area').style.display = 'block';
+
+        playFanfare(); // 結果発表音
+
+        // ★★★ 紙吹雪の安全装置（バグ対策） ★★★
+        if (typeof confetti === 'function') { 
+            confetti({
+                particleCount: 150,
+                spread: 70,
+                origin: { y: 0.6 }
+            });
+        }
+
+        const personalityScores = { A: scores.A, B: scores.B, C: scores.C, D: scores.D, E: scores.E, F: scores.F, G: scores.G, H: scores.H };
+        
+        let maxType = "A";
+        let maxScore = 0;
+
+        for (const type in personalityScores) {
+            if (personalityScores[type] > maxScore) {
+                maxScore = personalityScores[type];
+                maxType = type;
+            }
+        }
+        
+        // 虹になる確率低減ロジックを適用
+        if (scores.N > maxScore || maxScore < 2) {
+            maxType = "N";
+        }
+
+        const resultData = results[maxType];
+
+        const content = `
+            <span class="animal-icon">${resultData.animal}</span>
+            <div class="type-title">${resultData.title}</div>
+            <div class="catchphrase">${resultData.catch}</div>
+        `;
+        document.getElementById('result-content').innerHTML = content;
+        document.getElementById('result-desc').innerHTML = `<div class="desc">${resultData.desc}</div>`;
+
+        // SNSシェアボタンのリンク生成
+        const shareText = `私のマネータイプは…【${resultData.title}】でした！%0a${resultData.catch}%0a%0a#マネー診断`;
+        const shareUrl = window.location.href;
+        
+        document.getElementById('share-twitter').href = `https://twitter.com/intent/tweet?text=${shareText}&url=${shareUrl}`;
+        document.getElementById('share-line').href = `https://social-plugins.line.me/lineit/share?url=${shareUrl}`;
+
+        drawChart();
+    }
+
+    // --- 画像ダウンロード機能 (html2canvas) ---
+    function downloadResultImage() {
+        const target = document.getElementById('result-content-container');
+        
+        if (typeof html2canvas === 'undefined') {
+            alert('画像生成ライブラリの読み込みに失敗しました。インターネット接続を確認してください。');
+            return;
+        }
+
+        setTimeout(() => {
+            html2canvas(target, {
+                windowWidth: target.scrollWidth,
+                windowHeight: target.scrollHeight,
+                useCORS: true,
+                scale: 2
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'マネー診断結果.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        }, 500);
+    }
+    // --- チャート描画関数 ---
+    function drawChart() {
+        const ctx = document.getElementById('radarChart').getContext('2d');
+        
+        const protect = scores.A + scores.G + scores.C;
+        const use = scores.B + scores.F;
+        const increase = scores.E + scores.H;
+        const share = scores.D * 2;
+
+        new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: ['守る・計画', '使う・直感', '増やす・経験', '分ける・共感'],
+                datasets: [{
+                    label: 'あなたのマネーバランス',
+                    data: [protect, use, increase, share],
+                    backgroundColor: 'rgba(255, 193, 7, 0.4)',
+                    borderColor: '#FFC107',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#004D40'
+                }]
+            },
+            options: {
+                scale: {
+                    r: {
+                        beginAtZero: true,
+                        suggestedMax: 8,
+                        grid: { color: '#ccc' },
+                        pointLabels: {
+                            font: { size: 14, weight: 'bold' },
+                            color: '#004D40'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+    }
+</script>
+</body>
+</html>
